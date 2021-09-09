@@ -6,7 +6,7 @@
 int plugin_is_GPL_compatible;
 
 /* New emacs lisp function. All function exposed to Emacs must have this prototype. */
-static emacs_value Fget_cwd_by_pid (emacs_env *env, int nargs, emacs_value args[], void *data) {
+static emacs_value Fget_cwd_by_pid (emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
   return env->make_integer (env, 42);
 }
 

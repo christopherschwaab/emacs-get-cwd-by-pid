@@ -176,16 +176,17 @@ extern "C" WCHAR *get_cwd_by_pid(const DWORD pid) {
     return nullptr;
   }
 
-  USHORT processMachine;
-  USHORT nativeMachine;
-  if (IsWow64Process2(proc, &processMachine, &nativeMachine) == 0) {
-    // TODO what do we do here?
-    return nullptr;
-  }
-  if (processMachine != IMAGE_FILE_MACHINE_UNKNOWN) {
-    // TODO how do we need to handle WOW?
-    return nullptr;
-  }
+  // FIXME guess we need to load this dynamically for msys?
+  // USHORT processMachine;
+  // USHORT nativeMachine;
+  // if (IsWow64Process2(proc, &processMachine, &nativeMachine) == 0) {
+  //   // TODO what do we do here?
+  //   return nullptr;
+  // }
+  // if (processMachine != IMAGE_FILE_MACHINE_UNKNOWN) {
+  //   // TODO how do we need to handle WOW?
+  //   return nullptr;
+  // }
 
   auto peb = read_process_peb(proc);
   return get_current_directory_path(proc, peb.ProcessParameters);
