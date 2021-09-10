@@ -6,9 +6,6 @@
 #include <stdexcept>
 #include <string>
 
-#include <iostream>
-#include <cstdio>
-
 // https://docs.microsoft.com/en-us/windows/win32/api/winternl/ns-winternl-rtl_user_process_parameters
 // typedef struct _RTL_USER_PROCESS_PARAMETERS {
 //   BYTE           Reserved1[16];   // 0  16
@@ -140,8 +137,7 @@ static WCHAR* get_current_directory_path(HANDLE proc, const RTL_USER_PROCESS_PAR
     }
 
     const size_t pathLength = cwd.Length / 2;
-    auto path = reinterpret_cast<wchar_t*>(malloc((pathLength + 1) * sizeof(wchar_t)));
-
+    auto path = reinterpret_cast<wchar_t*>(malloc(pathLength * sizeof(wchar_t)));
     bytesRead = 0;
     const BOOL readOk = ReadProcessMemory(proc, cwd.Buffer, path, cwd.Length, &bytesRead);
     if (!readOk || bytesRead < cwd.Length) {
@@ -149,7 +145,6 @@ static WCHAR* get_current_directory_path(HANDLE proc, const RTL_USER_PROCESS_PAR
       throw std::runtime_error("ReadProcessMemory read " + std::to_string(bytesRead) + " bytes with error code: " + std::to_string(GetLastError()));
     }
 
-    path[pathLength] = '\0';
     *length = pathLength;
     return path;
 }
@@ -158,8 +153,7 @@ static WCHAR* get_current_directory_path(HANDLE proc, const RTL_USER_PROCESS_PAR
 // https://docs.microsoft.com/en-us/windows/win32/api/winternl/nf-winternl-ntqueryinformationprocess
 extern "C" WCHAR *get_cwd_by_pid(const DWORD pid, size_t* length) {
   try {
-    const HANDLE proc =
-        OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
+    const HANDLE proc = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
     if (proc == nullptr) {
       // TODO failed
       return nullptr;
@@ -177,6 +171,7 @@ extern "C" WCHAR *get_cwd_by_pid(const DWORD pid, size_t* length) {
     //   return nullptr;
     // }
 
+    // FIXME I guess there's perhaps a race condition here without suspending/resuming the thread?
     auto peb = read_process_peb(proc);
     return get_current_directory_path(proc, peb.ProcessParameters, length);
   } catch (...) {

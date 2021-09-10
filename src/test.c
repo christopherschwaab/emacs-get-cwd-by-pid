@@ -6,9 +6,8 @@
 static inline CHAR* narrow(const WCHAR* ws, const size_t length) {
   // TODO error checking?
   const size_t bufLength = WideCharToMultiByte(CP_UTF8, 0, ws, length, NULL, 0, NULL, NULL);
-  CHAR *s = (CHAR*) malloc(bufLength + 1);
+  CHAR *s = (CHAR*) malloc(bufLength);
   WideCharToMultiByte(CP_UTF8, 0, ws, length, s, bufLength, NULL, NULL);
-  s[bufLength] = '\0';
   return s;
 }
 
@@ -25,7 +24,7 @@ int main(int argc, char **argv) {
     wprintf(L"got: %ls\n", ws);
 
     CHAR* s = narrow(ws, length);
-    printf("got: %s\n", s);
+    printf("got string with length %llu: %.59s\n", length, s);
 
     free(ws);
     free(s);

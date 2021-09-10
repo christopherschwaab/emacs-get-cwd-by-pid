@@ -33,6 +33,7 @@ static emacs_value Fget_cwd_by_pid (emacs_env *env, ptrdiff_t nargs, emacs_value
   emacs_value utf8Path = env->make_string (env, s, length);
 
   free(ws);
+  free(s);
 
   return utf8Path;
 }
@@ -43,14 +44,14 @@ static void bind_function (emacs_env *env, const char *name, emacs_value Sfun) {
      the 'fset' function.  */
 
   /* Convert the strings to symbols by interning them */
-  emacs_value Qfset = env->intern (env, "fset");
+  emacs_value Qdefalias = env->intern (env, "defalias");
   emacs_value Qsym = env->intern (env, name);
 
   /* Prepare the arguments array */
   emacs_value args[] = { Qsym, Sfun };
 
   /* Make the call (2 == nb of arguments) */
-  env->funcall (env, Qfset, 2, args);
+  env->funcall (env, Qdefalias, 2, args);
 }
 
 /* Provide FEATURE to Emacs.  */
