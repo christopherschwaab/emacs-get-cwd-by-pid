@@ -132,10 +132,23 @@ static PEB read_process_peb(HANDLE proc) {
 
 static WCHAR* get_current_directory_path(HANDLE proc, const RTL_USER_PROCESS_PARAMETERS* userProcParams, size_t* length) {
     UNICODE_STRING cwd;
-    ReadProcessMemory(proc, userProcParams->Reserved2 + 5, &cwd, sizeof(UNICODE_STRING), nullptr);
+    SIZE_T bytesRead = 0;
+    BOOL uppReadOk = ReadProcessMemory(proc, userProcParams->Reserved2 + 5, &cwd, sizeof(UNICODE_STRING), &bytesRead);
+    if (!uppReadOk || bytesRead < sizeof(UNICODE_STRING)) {
+      // TODO what to do here
+      throw std::runtime_error("ReadProcessMemory read " + std::to_string(bytesRead) + " bytes with error code: " + std::to_string(GetLastError()));
+    }
+
     const size_t pathLength = cwd.Length / 2;
     auto path = reinterpret_cast<wchar_t*>(malloc((pathLength + 1) * sizeof(wchar_t)));
-    ReadProcessMemory(proc, cwd.Buffer, path, cwd.Length, nullptr);
+
+    bytesRead = 0;
+    const BOOL readOk = ReadProcessMemory(proc, cwd.Buffer, path, cwd.Length, &bytesRead);
+    if (!readOk || bytesRead < cwd.Length) {
+      // TODO what to do here
+      throw std::runtime_error("ReadProcessMemory read " + std::to_string(bytesRead) + " bytes with error code: " + std::to_string(GetLastError()));
+    }
+
     path[pathLength] = '\0';
     *length = pathLength;
     return path;
