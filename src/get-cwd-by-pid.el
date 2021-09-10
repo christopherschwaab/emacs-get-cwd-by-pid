@@ -19,7 +19,7 @@
 ;;
 ;;; Code:
 
-(unless (require 'emacs-get-cwd-by-pid nil t)
+(unless (require 'libemacs-get-cwd-by-pid nil t)
   (error "Failed to load the get-cwd-by-pid dynamic module which is required on windows!"))
 
 (provide 'get-cwd-by-pid)

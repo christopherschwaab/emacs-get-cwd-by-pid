@@ -79,7 +79,7 @@ emacs_module_init (struct emacs_runtime *ert)
   );
 
   bind_function (env, "get-cwd-by-pid", fun);
-  provide (env, "emacs-get-cwd-by-pid");
+  provide (env, "libemacs-get-cwd-by-pid");
 
   /* loaded successfully */
   return 0;
