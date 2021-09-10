@@ -157,24 +157,29 @@ static WCHAR* get_current_directory_path(HANDLE proc, const RTL_USER_PROCESS_PAR
 // https://stackoverflow.com/questions/14018280/how-to-get-a-process-working-dir-on-windows
 // https://docs.microsoft.com/en-us/windows/win32/api/winternl/nf-winternl-ntqueryinformationprocess
 extern "C" WCHAR *get_cwd_by_pid(const DWORD pid, size_t* length) {
-  const HANDLE proc = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
-  if (proc == nullptr) {
-    // TODO failed
+  try {
+    const HANDLE proc =
+        OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
+    if (proc == nullptr) {
+      // TODO failed
+      return nullptr;
+    }
+
+    // FIXME guess we need to load this dynamically for msys?
+    // USHORT processMachine;
+    // USHORT nativeMachine;
+    // if (IsWow64Process2(proc, &processMachine, &nativeMachine) == 0) {
+    //   // TODO what do we do here?
+    //   return nullptr;
+    // }
+    // if (processMachine != IMAGE_FILE_MACHINE_UNKNOWN) {
+    //   // TODO how do we need to handle WOW?
+    //   return nullptr;
+    // }
+
+    auto peb = read_process_peb(proc);
+    return get_current_directory_path(proc, peb.ProcessParameters, length);
+  } catch (...) {
     return nullptr;
   }
-
-  // FIXME guess we need to load this dynamically for msys?
-  // USHORT processMachine;
-  // USHORT nativeMachine;
-  // if (IsWow64Process2(proc, &processMachine, &nativeMachine) == 0) {
-  //   // TODO what do we do here?
-  //   return nullptr;
-  // }
-  // if (processMachine != IMAGE_FILE_MACHINE_UNKNOWN) {
-  //   // TODO how do we need to handle WOW?
-  //   return nullptr;
-  // }
-
-  auto peb = read_process_peb(proc);
-  return get_current_directory_path(proc, peb.ProcessParameters, length);
 }

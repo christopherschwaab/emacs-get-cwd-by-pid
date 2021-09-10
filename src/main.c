@@ -23,6 +23,9 @@ static emacs_value Fget_cwd_by_pid (emacs_env *env, ptrdiff_t nargs, emacs_value
 
   size_t wsLength = 0;
   wchar_t* ws = get_cwd_by_pid((DWORD) pid, &wsLength);
+  if (ws == NULL) {
+    return env->intern (env, "nil");
+  }
 
   size_t length = 0;
   char* s = narrow(ws, wsLength, &length);
@@ -71,7 +74,7 @@ emacs_module_init (struct emacs_runtime *ert)
               1,            /* min. number of arguments */
               1,            /* max. number of arguments */
               Fget_cwd_by_pid,  /* actual function pointer */
-              "doc",        /* docstring */
+              "Get the current working directory of the process with pid PID.",        /* docstring */
               NULL          /* user pointer of your choice (data param in Fget_cwd_by_pid) */
   );
 
