@@ -17,9 +17,6 @@
 //   UNICODE_STRING CommandLine;
 // } RTL_USER_PROCESS_PARAMETERS, *PRTL_USER_PROCESS_PARAMETERS;
 
-
-
-// http://undocumented.ntinternals.net/index.html?page=UserMode%2FStructures%2FRTL_USER_PROCESS_PARAMETERS.html
 // typedef struct _RTL_USER_PROCESS_PARAMETERS {
 //   ULONG                   MaximumLength;           // 0  4
 //   ULONG                   Length;                  // 4  4
@@ -51,32 +48,6 @@
 //   UNICODE_STRING          RuntimeData;
 //   RTL_DRIVE_LETTER_CURDIR DLCurrentDirectory[0x20];
 // } RTL_USER_PROCESS_PARAMETERS, *PRTL_USER_PROCESS_PARAMETERS;
-
-UNICODE_STRING get_current_directory_path(const RTL_USER_PROCESS_PARAMETERS& userProcParams) {
-    UNICODE_STRING cwd;
-    memcpy(&cwd, &userProcParams.Reserved2[5], sizeof(UNICODE_STRING));
-    return cwd;
-}
-//
-//__kernel_entry NTSTATUS NtQueryInformationProcess(
-//  HANDLE           ProcessHandle,
-//  PROCESSINFOCLASS ProcessInformationClass,
-//  PVOID            ProcessInformation,
-//  ULONG            ProcessInformationLength,
-//  PULONG           ReturnLength
-//);
-//
-//resolve_nt_query_information_process(
-//) {
-//}
-
-// static NtQueryInformationProcess;
-
-// static inline std::string shorten(WCHAR* s) {
-//   int nbytes = WideCharToMultiByte(CP_UTF8, 0, s.c_str(), (int) s.length(), nullptr, 0, nullptr, nullptr);
-//   std::vector<char> buf(nbytes);
-//   return string { buf.data(), (size_t) WideCharToMultiByte(CP_UTF8, 0, s.c_str(), (int) s.length(), buf.data(), nbytes, nullptr, nullptr) };
-// }
 
 namespace {
   using unique_handle = std::unique_ptr<std::remove_pointer<HANDLE>::type, BOOL(*)(HANDLE)>;
@@ -138,7 +109,7 @@ struct NtQueryInformationProcessLoader {
 
 static NtQueryInformationProcessLoader ntQueryInformationProcessLoader;
 
-PEB read_process_peb(HANDLE proc) {
+static PEB read_process_peb(HANDLE proc) {
   DWORD minBufLength;
   PROCESS_BASIC_INFORMATION procInfo;
   const NTSTATUS result = ntQueryInformationProcess(proc, ProcessBasicInformation, &procInfo, sizeof(PROCESS_BASIC_INFORMATION), &minBufLength);
@@ -152,24 +123,26 @@ PEB read_process_peb(HANDLE proc) {
   PEB peb;
   if (!ReadProcessMemory(proc, procInfo.PebBaseAddress, &peb, sizeof(PEB), &bytesRead) || bytesRead < sizeof(PEB)) {
     // TODO what to do here
-    throw std::runtime_error("ReadProcessMemory: " + GetLastError());
+    throw std::runtime_error("ReadProcessMemory: " + std::to_string(GetLastError()));
   }
 
   return peb;
 }
 
-WCHAR* get_current_directory_path(HANDLE proc, const RTL_USER_PROCESS_PARAMETERS* userProcParams) {
+static WCHAR* get_current_directory_path(HANDLE proc, const RTL_USER_PROCESS_PARAMETERS* userProcParams, size_t* length) {
     UNICODE_STRING cwd;
     ReadProcessMemory(proc, userProcParams->Reserved2 + 5, &cwd, sizeof(UNICODE_STRING), nullptr);
-    auto path = std::make_unique<wchar_t[]>(cwd.Length / 2 + 1);
+    const size_t pathLength = cwd.Length / 2;
+    auto path = std::make_unique<wchar_t[]>(pathLength + 1);
     ReadProcessMemory(proc, cwd.Buffer, path.get(), cwd.Length, nullptr);
-    path[cwd.Length / 2] = '\0';
+    path[pathLength] = '\0';
+    *length = pathLength;
     return path.release();
 }
 
 // https://stackoverflow.com/questions/14018280/how-to-get-a-process-working-dir-on-windows
 // https://docs.microsoft.com/en-us/windows/win32/api/winternl/nf-winternl-ntqueryinformationprocess
-extern "C" WCHAR *get_cwd_by_pid(const DWORD pid) {
+extern "C" WCHAR *get_cwd_by_pid(const DWORD pid, size_t* length) {
   const HANDLE proc = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
   if (proc == nullptr) {
     // TODO failed
@@ -189,5 +162,5 @@ extern "C" WCHAR *get_cwd_by_pid(const DWORD pid) {
   // }
 
   auto peb = read_process_peb(proc);
-  return get_current_directory_path(proc, peb.ProcessParameters);
+  return get_current_directory_path(proc, peb.ProcessParameters, length);
 }

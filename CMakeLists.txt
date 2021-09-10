@@ -1,12 +1,18 @@
 cmake_minimum_required(VERSION 3.20)
 project(emacs-cwd-by-pid)
 
-add_library(libemacs-get-cwd-by-pid SHARED
-  src/get_process_cwd.cpp
-  src/main.c)
+#add_library(libemacs-get-cwd-by-pid SHARED
+#  src/get_process_cwd.cpp
+#  src/main.c)
 
+add_executable(libemacs-get-cwd-by-pid WIN32
+  src/get_process_cwd.cpp
+  src/test.c)
 target_compile_definitions(libemacs-get-cwd-by-pid
   PUBLIC -DUNICODE=1
   PUBLIC -D_UNICODE=1
   PUBLIC -DNOMINMAX=1)
+target_link_options(libemacs-get-cwd-by-pid
+  PRIVATE /machine:x64 /subsystem:console /incremental:no)
+
 set_property(TARGET libemacs-get-cwd-by-pid PROPERTY CXX_STANDARD 17)
