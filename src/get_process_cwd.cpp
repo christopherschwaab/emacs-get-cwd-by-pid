@@ -133,11 +133,11 @@ static WCHAR* get_current_directory_path(HANDLE proc, const RTL_USER_PROCESS_PAR
     UNICODE_STRING cwd;
     ReadProcessMemory(proc, userProcParams->Reserved2 + 5, &cwd, sizeof(UNICODE_STRING), nullptr);
     const size_t pathLength = cwd.Length / 2;
-    auto path = std::make_unique<wchar_t[]>(pathLength + 1);
-    ReadProcessMemory(proc, cwd.Buffer, path.get(), cwd.Length, nullptr);
+    auto path = reinterpret_cast<wchar_t*>(malloc((pathLength + 1) * sizeof(wchar_t)));
+    ReadProcessMemory(proc, cwd.Buffer, path, cwd.Length, nullptr);
     path[pathLength] = '\0';
     *length = pathLength;
-    return path.release();
+    return path;
 }
 
 // https://stackoverflow.com/questions/14018280/how-to-get-a-process-working-dir-on-windows
