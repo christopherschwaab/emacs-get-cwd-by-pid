@@ -121,9 +121,10 @@ static PEB read_process_peb(HANDLE proc) {
 
   SIZE_T bytesRead;
   PEB peb;
-  if (!ReadProcessMemory(proc, procInfo.PebBaseAddress, &peb, sizeof(PEB), &bytesRead) || bytesRead < sizeof(PEB)) {
+  const BOOL readOk = ReadProcessMemory(proc, procInfo.PebBaseAddress, &peb, sizeof(PEB), &bytesRead);
+  if (!readOk || bytesRead < sizeof(PEB)) {
     // TODO what to do here
-    throw std::runtime_error("ReadProcessMemory: " + std::to_string(GetLastError()));
+    throw std::runtime_error("ReadProcessMemory read " + std::to_string(bytesRead) + " bytes with error code: " + std::to_string(GetLastError()));
   }
 
   return peb;

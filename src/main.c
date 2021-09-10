@@ -1,13 +1,37 @@
 #include <emacs-module.h>
+#include <stdint.h>
 
 #include "get_process_cwd.h"
 
 /* Declare mandatory GPL symbol.  */
 int plugin_is_GPL_compatible;
 
+static CHAR* narrow(const WCHAR* ws, const size_t wsLength, size_t* length) {
+  // TODO error checking?
+  const size_t bufLength = WideCharToMultiByte(CP_UTF8, 0, ws, wsLength, NULL, 0, NULL, NULL);
+  CHAR *s = (CHAR*) malloc(bufLength + 1);
+  WideCharToMultiByte(CP_UTF8, 0, ws, wsLength, s, bufLength, NULL, NULL);
+  s[bufLength] = '\0';
+  *length = bufLength;
+  return s;
+}
+
 /* New emacs lisp function. All function exposed to Emacs must have this prototype. */
 static emacs_value Fget_cwd_by_pid (emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
-  return env->make_integer (env, 42);
+  // TODO error checking
+  intmax_t pid = env->extract_integer (env, args[0]);
+
+  size_t wsLength = 0;
+  wchar_t* ws = get_cwd_by_pid((DWORD) pid, &wsLength);
+
+  size_t length = 0;
+  char* s = narrow(ws, wsLength, &length);
+  // TODO do we need to release s ourselves?
+  emacs_value utf8Path = env->make_string (env, s, length);
+
+  free(ws);
+
+  return utf8Path;
 }
 
 /* Bind NAME to FUN.  */
@@ -44,8 +68,8 @@ emacs_module_init (struct emacs_runtime *ert)
 
   /* create a lambda (returns an emacs_value) */
   emacs_value fun = env->make_function (env,
-              0,            /* min. number of arguments */
-              0,            /* max. number of arguments */
+              1,            /* min. number of arguments */
+              1,            /* max. number of arguments */
               Fget_cwd_by_pid,  /* actual function pointer */
               "doc",        /* docstring */
               NULL          /* user pointer of your choice (data param in Fget_cwd_by_pid) */
